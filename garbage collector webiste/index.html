@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Garbage Collection Simulator</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #2ecc71;
+            --warning: #f39c12;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+        
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 15px;
+            margin: 2rem 0;
+        }
+        
+        .memory-block {
+            height: 80px;
+            background-color: var(--secondary);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+        }
+        
+        .memory-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .memory-block:hover::before {
+            opacity: 1;
+        }
+        
+        .memory-block.unused {
+            background-color: var(--accent);
+            animation: pulse 2s infinite;
+        }
+        
+        .memory-block.cleaned {
+            transform: scale(0);
+            opacity: 0;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #3a516e;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 150px;
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card p {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--secondary);
+            color: var(--secondary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .algorithm-info {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 6px;
+            margin-top: 1.5rem;
+        }
+        
+        .algorithm-info h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .algorithm-info p {
+            margin-bottom: 1rem;
+        }
+        
+        .algorithm-info ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        footer {
+            background-color: var(--dark);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            .memory-grid {
+                grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Garbage Collection Simulator</h1>
+        <p>Visualize how memory management works in operating systems</p>
+    </header>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Memory Management Simulator</h2>
+            <p>Click on memory blocks to mark them as unused (garbage), then run the garbage collector to clean them up.</p>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>Total Blocks</h3>
+                    <p id="total-blocks">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Used Blocks</h3>
+                    <p id="used-blocks">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Unused Blocks</h3>
+                    <p id="unused-blocks">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Memory Usage</h3>
+                    <p id="memory-usage">0%</p>
+                </div>
+            </div>
+            
+            <div class="memory-grid" id="memory-grid"></div>
+            
+            <div class="controls">
+                <button class="btn-primary" onclick="allocateBlock()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                    </svg>
+                    Allocate Block
+                </button>
+                <button class="btn-success" onclick="runGarbageCollector()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5H14v8.5a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5V15H5v-1.5a.5.5 0 0 1-.5-.5V3H1.5a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5H5v-1a.5.5 0 0 1 1 0v1h5v-1a.5.5 0 0 1 1 0zM2.5 2a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-11zm1 3h3a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5zm5 0h3a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-7a.5.5 0 0 1 .5-.5z"/>
+                    </svg>
+                    Run Garbage Collector
+                </button>
+                <button class="btn-warning" onclick="resetMemory()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    Reset Memory
+                </button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Garbage Collection Algorithms</h2>
+            <p>Learn about different garbage collection techniques used in operating systems</p>
+            
+            <div class="tabs">
+                <div class="tab active" onclick="openTab(event, 'mark-sweep')">Mark-Sweep</div>
+                <div class="tab" onclick="openTab(event, 'mark-compact')">Mark-Compact</div>
+                <div class="tab" onclick="openTab(event, 'generational')">Generational</div>
+                <div class="tab" onclick="openTab(event, 'reference-counting')">Reference Counting</div>
+            </div>
+            
+            <div id="mark-sweep" class="tab-content active">
+                <div class="algorithm-info">
+                    <h3>Mark-Sweep Algorithm</h3>
+                    <p>The most basic garbage collection algorithm consisting of two phases:</p>
+                    <ol>
+                        <li><strong>Mark phase:</strong> Traverse the object graph starting from root references, marking all reachable objects as live.</li>
+                        <li><strong>Sweep phase:</strong> Scan through memory and reclaim memory from unmarked (unreachable) objects.</li>
+                    </ol>
+                    <p><strong>Advantages:</strong> Simple to implement, handles cyclic references.</p>
+                    <p><strong>Disadvantages:</strong> Causes memory fragmentation, requires stopping the program (stop-the-world).</p>
+                </div>
+            </div>
+            
+            <div id="mark-compact" class="tab-content">
+                <div class="algorithm-info">
+                    <h3>Mark-Compact Algorithm</h3>
+                    <p>An enhancement of mark-sweep that adds a compaction phase to reduce fragmentation:</p>
+                    <ol>
+                        <li><strong>Mark phase:</strong> Same as mark-sweep - identify live objects.</li>
+                        <li><strong>Compact phase:</strong> Move all live objects to one end of memory space.</li>
+                        <li><strong>Update references:</strong> Adjust all pointers to the new object locations.</li>
+                    </ol>
+                    <p><strong>Advantages:</strong> Eliminates fragmentation, improves locality.</p>
+                    <p><strong>Disadvantages:</strong> More expensive than mark-sweep, longer pause times.</p>
+                </div>
+            </div>
+            
+            <div id="generational" class="tab-content">
+                <div class="algorithm-info">
+                    <h3>Generational Algorithm</h3>
+                    <p>Based on the observation that most objects die young (weak generational hypothesis):</p>
+                    <ol>
+                        <li>Memory is divided into generations (typically young and old).</li>
+                        <li>New objects are allocated in the young generation.</li>
+                        <li>Young generation is collected frequently (minor GC).</li>
+                        <li>Objects that survive several collections are promoted to old generation.</li>
+                        <li>Old generation is collected less frequently (major GC).</li>
+                    </ol>
+                    <p><strong>Advantages:</strong> Focuses effort where most garbage is, reduces pause times.</p>
+                    <p><strong>Disadvantages:</strong> Needs to track references between generations, more complex.</p>
+                </div>
+            </div>
+            
+            <div id="reference-counting" class="tab-content">
+                <div class="algorithm-info">
+                    <h3>Reference Counting</h3>
+                    <p>Maintains a count of references to each object and collects objects when count reaches zero:</p>
+                    <ol>
+                        <li>Each object has a reference count field.</li>
+                        <li>When a reference is created, count is incremented.</li>
+                        <li>When a reference is deleted, count is decremented.</li>
+                        <li>When count reaches zero, object is immediately reclaimed.</li>
+                    </ol>
+                    <p><strong>Advantages:</strong> Immediate reclamation, incremental operation.</p>
+                    <p><strong>Disadvantages:</strong> Cannot handle cyclic references, overhead on every reference operation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2023 Garbage Collection Simulator | Educational Tool for Operating Systems</p>
+    </footer>
+
+    <script>
+        // Memory management
+        let blockCounter = 1;
+        const memoryGrid = document.getElementById('memory-grid');
+        
+        function createMemoryBlock(id) {
+            const block = document.createElement('div');
+            block.className = 'memory-block';
+            block.textContent = id;
+            block.dataset.id = id;
+            block.onclick = () => {
+                block.classList.toggle('unused');
+                updateStats();
+            };
+            return block;
+        }
+        
+        function allocateBlock() {
+            if (memoryGrid.children.length >= 20) {
+                alert('Maximum memory blocks reached (20 blocks)');
+                return;
+            }
+            
+            const block = createMemoryBlock(blockCounter++);
+            memoryGrid.appendChild(block);
+            updateStats();
+        }
+        
+        function runGarbageCollector() {
+            const unusedBlocks = document.querySelectorAll('.memory-block.unused');
+            if (unusedBlocks.length === 0) {
+                alert('No unused blocks to collect!');
+                return;
+            }
+            
+            // Animation for cleaning
+            unusedBlocks.forEach(block => {
+                block.classList.add('cleaned');
+                setTimeout(() => {
+                    block.remove();
+                    updateStats();
+                }, 500);
+            });
+            
+            // Show message
+            const message = document.createElement('div');
+            message.textContent = `Collected ${unusedBlocks.length} unused blocks`;
+            message.style.position = 'fixed';
+            message.style.bottom = '20px';
+            message.style.left = '50%';
+            message.style.transform = 'translateX(-50%)';
+            message.style.backgroundColor = 'var(--success)';
+            message.style.color = 'white';
+            message.style.padding = '10px 20px';
+            message.style.borderRadius = '4px';
+            message.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+            message.style.zIndex = '1000';
+            document.body.appendChild(message);
+            
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 300);
+            }, 2000);
+        }
+        
+        function resetMemory() {
+            memoryGrid.innerHTML = '';
+            blockCounter = 1;
+            updateStats();
+        }
+        
+        function updateStats() {
+            const totalBlocks = memoryGrid.children.length;
+            const unusedBlocks = document.querySelectorAll('.memory-block.unused').length;
+            const usedBlocks = totalBlocks - unusedBlocks;
+            const memoryUsage = totalBlocks > 0 ? Math.round((usedBlocks / totalBlocks) * 100) : 0;
+            
+            document.getElementById('total-blocks').textContent = totalBlocks;
+            document.getElementById('used-blocks').textContent = usedBlocks;
+            document.getElementById('unused-blocks').textContent = unusedBlocks;
+            document.getElementById('memory-usage').textContent = `${memoryUsage}%`;
+        }
+        
+        // Tab functionality
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove('active');
+            }
+            
+            const tabs = document.getElementsByClassName('tab');
+            for (let i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
+        // Initialize with some blocks
+        window.onload = function() {
+            for (let i = 0; i < 5; i++) {
+                allocateBlock();
+            }
+        };
+    </script>
+</body>
+</html>
